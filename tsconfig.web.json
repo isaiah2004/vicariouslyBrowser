@@ -1,0 +1,25 @@
+{
+  "extends": "@electron-toolkit/tsconfig/tsconfig.web.json",
+  "include": [
+    "src/renderer/src/env.d.ts",
+    "src/renderer/src/**/*",
+    "src/renderer/src/**/*.tsx",
+    // These patterns would detect:
+    // 1. All .ts files in the src/renderer/src/pages directory and its subdirectories
+    // 2. All .tsx files in the src/renderer/src/pages directory and its subdirectories
+    // This includes TypeScript files for React components and other TypeScript files in the pages directory
+    "src/renderer/src/pages/**/*.ts",
+    "src/renderer/src/pages/**/*.tsx",
+    "src/preload/*.d.ts"
+  ],
+  "compilerOptions": {
+    "composite": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@renderer/*": [
+        "src/renderer/src/*"
+      ]
+    }
+  }
+}
