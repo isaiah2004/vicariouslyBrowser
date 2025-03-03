@@ -5,6 +5,7 @@ import InternetMode from './pages/InternetMode/InternetMode'
 
 import Titlebar from './components/Titlebar'
 import { useMode } from './hooks/useMode'
+// import { useEffect } from 'react'
 
 function AppContent(): JSX.Element {
   const { isOsMode } = useMode()

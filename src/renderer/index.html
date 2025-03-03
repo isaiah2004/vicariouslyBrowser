@@ -6,12 +6,26 @@
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
+      content="default-src 'self'; connect-src 'self' https://api.openai.com https://api.firecrawl.dev; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:"
     />
+    <!-- <link href="./src/assets/main.css" rel="stylesheet">
+      -->
+      <!-- <script src="https://unpkg.com/@tailwindcss/browser@4"></script> -->
   </head>
 
   <body>
     <div id="root"></div>
+    <div id="grid-container"></div>
+    <script>
+      // You can replace this condition with your own logic
+      const shouldLoadGrid = true;
+      if (shouldLoadGrid) {
+        const gridSvg = document.createElement('object');
+        gridSvg.type = 'image/svg+xml';
+        gridSvg.data = './src/assets/grid.svg';
+        document.getElementById('grid-container').appendChild(gridSvg);
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

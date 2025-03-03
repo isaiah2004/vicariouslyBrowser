@@ -10,6 +10,9 @@ interface Tab {
   active: boolean
   favicon?: string
   lastPosition?: number
+  // Add history tracking
+  history: string[]
+  currentIndex: number
 }
 
 export default function InternetMode(): JSX.Element {
@@ -17,7 +20,16 @@ export default function InternetMode(): JSX.Element {
     const savedTabs = localStorage.getItem('browser-tabs')
     return savedTabs
       ? JSON.parse(savedTabs)
-      : [{ id: '1', title: 'New Tab', url: 'about:blank', active: true }]
+      : [
+          {
+            id: '1',
+            title: 'New Tab',
+            url: 'about:blank',
+            active: true,
+            history: ['about:blank'],
+            currentIndex: 0
+          }
+        ]
   })
   const [currentUrl, setCurrentUrl] = useState('')
   const [canGoBack, setCanGoBack] = useState(false)
@@ -26,6 +38,14 @@ export default function InternetMode(): JSX.Element {
   // Save tabs to localStorage whenever they change
   useEffect(() => {
     localStorage.setItem('browser-tabs', JSON.stringify(tabs))
+  }, [tabs])
+
+  // Update this useEffect to sync currentUrl with active tab's URL
+  useEffect(() => {
+    const activeTab = tabs.find((tab) => tab.active)
+    if (activeTab) {
+      setCurrentUrl(activeTab.url)
+    }
   }, [tabs])
 
   const handleUrlSubmit = (e: React.FormEvent): void => {
@@ -45,8 +65,36 @@ export default function InternetMode(): JSX.Element {
   }
 
   const handleUrlChange = (tabId: string, newUrl: string): void => {
-    setTabs(tabs.map((tab) => (tab.id === tabId ? { ...tab, url: newUrl } : tab)))
-    if (tabs.find((tab) => tab.id === tabId)?.active) {
+    // Don't update if the URL hasn't actually changed
+    const currentTab = tabs.find((tab) => tab.id === tabId)
+    if (currentTab && currentTab.url === newUrl) {
+      return
+    }
+
+    setTabs(
+      tabs.map((tab) => {
+        if (tab.id === tabId) {
+          // Only update history if this is a new URL
+          const lastHistoryEntry = tab.history[tab.currentIndex]
+          if (lastHistoryEntry !== newUrl) {
+            const newHistory = tab.history.slice(0, tab.currentIndex + 1)
+            newHistory.push(newUrl)
+            return {
+              ...tab,
+              url: newUrl,
+              history: newHistory,
+              currentIndex: newHistory.length - 1
+            }
+          }
+          return { ...tab, url: newUrl }
+        }
+        return tab
+      })
+    )
+
+    // Update currentUrl when the active tab's URL changes
+    const isActiveTab = tabs.find((tab) => tab.id === tabId)?.active
+    if (isActiveTab) {
       setCurrentUrl(newUrl)
     }
   }
@@ -60,7 +108,9 @@ export default function InternetMode(): JSX.Element {
       id: Date.now().toString(),
       title: 'New Tab',
       url: 'about:blank',
-      active: true
+      active: true,
+      history: ['about:blank'],
+      currentIndex: 0
     }
     setTabs(tabs.map((tab) => ({ ...tab, active: false })).concat(newTab))
     setCurrentUrl('')
@@ -82,12 +132,17 @@ export default function InternetMode(): JSX.Element {
   }
 
   const activateTab = (tabId: string): void => {
-    setTabs(
-      tabs.map((tab) => ({
-        ...tab,
-        active: tab.id === tabId
-      }))
-    )
+    const newTabs = tabs.map((tab) => ({
+      ...tab,
+      active: tab.id === tabId
+    }))
+    setTabs(newTabs)
+
+    // Update currentUrl when switching tabs
+    const activeTab = newTabs.find((tab) => tab.id === tabId)
+    if (activeTab) {
+      setCurrentUrl(activeTab.url)
+    }
   }
 
   const handleNavigationStateChange = (
@@ -103,24 +158,34 @@ export default function InternetMode(): JSX.Element {
 
   const handleGoBack = (): void => {
     const activeTab = tabs.find((tab) => tab.active)
-    if (activeTab) {
+    if (activeTab && activeTab.currentIndex > 0) {
       const webview = document.querySelector(
         `webview[data-id="${activeTab.id}"]`
       ) as Electron.WebviewTag
       if (webview && webview.canGoBack()) {
         webview.goBack()
+        setTabs(
+          tabs.map((tab) =>
+            tab.id === activeTab.id ? { ...tab, currentIndex: tab.currentIndex - 1 } : tab
+          )
+        )
       }
     }
   }
 
   const handleGoForward = (): void => {
     const activeTab = tabs.find((tab) => tab.active)
-    if (activeTab) {
+    if (activeTab && activeTab.currentIndex < activeTab.history.length - 1) {
       const webview = document.querySelector(
         `webview[data-id="${activeTab.id}"]`
       ) as Electron.WebviewTag
       if (webview && webview.canGoForward()) {
         webview.goForward()
+        setTabs(
+          tabs.map((tab) =>
+            tab.id === activeTab.id ? { ...tab, currentIndex: tab.currentIndex + 1 } : tab
+          )
+        )
       }
     }
   }

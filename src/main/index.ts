@@ -2,16 +2,69 @@ import { app, shell, BrowserWindow, ipcMain, desktopCapturer } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import './ephermal-key'
+import './screenDescribe'
+import './Control'
+import 'dotenv'
+import { configDotenv } from 'dotenv'
+
+// Add this if you haven't set up environment variables yet
+configDotenv()
+// console.log(process.env.OPENAI_API_KEY)
+
+ipcMain.handle('get-env-variable', (_event, variableName: string) => {
+  return process.env[variableName]
+})
+
+// Add this handler
+ipcMain.handle('toggle-grid-overlay', () => {
+  const overlayWindow = BrowserWindow.getAllWindows().find(
+    (win) => win.webContents.getURL() === 'http://localhost:5173/grid'
+  )
+  console.log('we are here')
+  if (overlayWindow) {
+    console.log('detected')
+    overlayWindow.close()
+    return
+  }
+
+  const window = new BrowserWindow({
+    width: 1920,
+    height: 1080,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    focusable: false,
+    title: 'grid-overlay', // Add title to identify this window
+    webPreferences: {
+      nodeIntegration: true
+    }
+  })
+
+  window.setIgnoreMouseEvents(true)
+  window.maximize()
+  window.loadURL('http://localhost:5173/grid')
+  // Auto-cleanup when window is closed
+  window.on('closed', () => {
+    // overlayWindow = null
+    // Optional: Notify renderer that overlay was closed
+    BrowserWindow.getAllWindows().forEach((win) => {
+      win.webContents.send('grid-overlay-closed')
+    })
+  })
+})
 
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
     title: 'vicariously',
-    width: 900,
-    height: 670,
+    width: 400,
+    height: 400,
     show: false,
     frame: false, // Remove default frame
+    transparent: true,
     titleBarStyle: 'hidden',
+    backgroundColor: '#00000000',
     ...(process.platform === 'linux' ? { icon } : {}),
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -33,7 +86,7 @@ function createWindow(): void {
       }
     }
   )
-
+  shell.beep()
   // Handle desktop capture request from renderer
   ipcMain.handle('DESKTOP_CAPTURER_GET_SOURCES', (_event, opts) => {
     return desktopCapturer.getSources(opts)
@@ -98,10 +151,39 @@ app.whenReady().then(() => {
   })
 
   ipcMain.on('mode-os', () => {
+    shell.beep()
+
     console.log('mode-os')
+    const win = BrowserWindow.getFocusedWindow()
+    if (win?.isMaximized()) {
+      win.unmaximize()
+      win.setBounds({ width: 400, height: 400 })
+      win.webContents.send('window-unmaximized')
+    } else {
+      // win?.maximize()
+      if (win) {
+        win.setBounds({ width: 400, height: 400 })
+        win.webContents.send('window-unmaximized')
+      }
+    }
   })
   ipcMain.on('mode-internet', () => {
+    shell.beep()
     console.log('mode-internet')
+
+    const win = BrowserWindow.getFocusedWindow()
+    if (win) {
+      win?.setBounds({ width: 900, height: 700 })
+    }
+    if (win?.isMaximized()) {
+      win.unmaximize()
+      win.webContents.send('window-unmaximized')
+    } else {
+      if (win) {
+        win.maximize()
+        win.webContents.send('window-maximized')
+      }
+    }
   })
 
   app.on('activate', function () {

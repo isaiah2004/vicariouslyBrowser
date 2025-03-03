@@ -5,21 +5,12 @@ body {
   align-items: center;
   justify-content: center;
   overflow: hidden;
-  /* background-image: url('./wavy-lines.svg'); */
+  background-image: url('./wavy-lines.svg');
   background-size: cover;
   user-select: none;
   border-radius: 30px;
-}
 
-.grid-overlay{
-  width: 100vw;
-  height: 100vw;
-  /* background-color:#087ea411; */
-  background-image: url('./grid.svg');
-  opacity: 0.05; /* Adjust this value between 0 and 1 to control transparency */
-  background-position: 0 -40px; /* Move the background image 40px up */
 }
-
 
 code {
   font-weight: 600;
@@ -40,7 +31,7 @@ code {
 .titlebar {
   height: 40px;
   background: var(--ev-c-black);
-  border-bottom: 0.5px solid #ffffff55;
+  border-bottom: 0.5px solid #ffffff55 ;
   /* box-shadow:  #087da450 3px 3px 3px 3px; */
   display: flex;
   align-items: center;
@@ -54,6 +45,7 @@ code {
   -webkit-app-region: drag;
 }
 
+
 .titlebar-drag-region {
   position: absolute;
   top: 0;
@@ -63,11 +55,12 @@ code {
   -webkit-app-region: drag;
 }
 
-.toggle-button-content {
+.toggle-button-content{
   display: flex;
   align-items: center;
   gap: 4px;
 }
+
 
 .window-title {
   color: var(--ev-c-text-1);
@@ -116,14 +109,14 @@ code {
 } */
 
 .toggle-button.os-mode {
-  background: #2f3242;
+  background: #2F3242;
 }
 .toggle-button.os-mode:hover {
   background: #4a5ab4;
 }
 
 .toggle-button.internet-mode {
-  background: #2f3242;
+  background: #2F3242;
 }
 
 .toggle-button.internet-mode:hover {
@@ -187,7 +180,7 @@ code {
   font-weight: 700;
   line-height: 32px;
   text-align: center;
-  margin-top: 1rem;
+  margin-top:  1rem;
   /* padding: 16px 0; */
 }
 
@@ -212,6 +205,7 @@ code {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   font-weight: 700;
+
 }
 
 .actions {
@@ -332,15 +326,9 @@ code {
 }
 
 @keyframes blink {
-  0% {
-    opacity: 0;
-  }
-  50% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 .recording-controls .toggle-button {
@@ -374,6 +362,7 @@ code {
   overflow: hidden;
   border-radius: 8px;
   box-shadow: 0 0 10px 2px #ffffff33;
+
 }
 
 .url-bar-container {

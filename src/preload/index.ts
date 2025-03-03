@@ -15,15 +15,18 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('electron', {
       ...electronAPI, // Spread all electron toolkit APIs
       ipcRenderer: {
-        ...ipcRenderer, // Spread all ipcRenderer methods
-        on: ipcRenderer.on.bind(ipcRenderer), // Listen to IPC events
-        send: ipcRenderer.send.bind(ipcRenderer), // Send IPC events
-        removeAllListeners: ipcRenderer.removeAllListeners.bind(ipcRenderer) // Remove all event listeners
+        ...ipcRenderer,
+        on: ipcRenderer.on.bind(ipcRenderer),
+        send: ipcRenderer.send.bind(ipcRenderer),
+        invoke: ipcRenderer.invoke.bind(ipcRenderer),
+        removeAllListeners: ipcRenderer.removeAllListeners.bind(ipcRenderer)
       },
       desktopCapturer: {
         // Expose screen capture functionality
         getSources: (opts) => ipcRenderer.invoke('DESKTOP_CAPTURER_GET_SOURCES', opts)
-      }
+      },
+      // Add this new method
+      createWindow: () => ipcRenderer.invoke('create-browser-window')
     })
     // Expose custom APIs to the renderer process
     contextBridge.exposeInMainWorld('api', api)

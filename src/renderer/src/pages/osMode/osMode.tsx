@@ -1,14 +1,69 @@
-import { useState, useRef } from 'react'
-import Versions from '../../components/Versions'
-import electronLogo from '../../assets/electron.svg'
-import { VideoIcon, StopCircleIcon } from 'lucide-react'
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import { useState, useEffect, useRef } from 'react'
+import { VideoIcon, StopCircleIcon, MicIcon, PhoneOff } from 'lucide-react'
+import AbstractBall from '@renderer/components/abstract-ball'
+import useWebRTCAudioSession from '@renderer/hooks/use-webrtc'
+import { useToolsFunctions } from '@renderer/hooks/use-tools'
+import { tools } from '@renderer/lib/tools'
+import { motion } from 'framer-motion'
+import './osMode.css'
+
+// Constants
+const INITIAL_CONFIG = {
+  perlinTime: 50.0,
+  perlinDNoise: 2.5,
+  chromaRGBr: 7.5,
+  chromaRGBg: 5,
+  chromaRGBb: 7,
+  chromaRGBn: 0,
+  chromaRGBm: 1.0,
+  sphereWireframe: false,
+  spherePoints: false,
+  spherePsize: 1.0,
+  cameraSpeedY: 0.0,
+  cameraSpeedX: 0.0,
+  cameraZoom: 175,
+  cameraGuide: false,
+  perlinMorph: 5.5
+}
+
+const FUNCTION_NAME_MAP: Record<string, string> = {
+  timeFunction: 'getCurrentTime',
+  backgroundFunction: 'changeBackgroundColor',
+  partyFunction: 'partyMode',
+  launchWebsite: 'launchWebsite',
+  copyToClipboard: 'copyToClipboard',
+  scrapeWebsite: 'scrapeWebsite',
+  toogleGridOverlay: 'toogleGridOverlay',
+  ScreenDescriber: 'ScreenDescriber'
+}
 
 export default function OsMode(): JSX.Element {
+  // State
+  const [voice] = useState('alloy') // Add voice state
   const [isRecording, setIsRecording] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [config, setConfig] = useState(INITIAL_CONFIG)
+
+  // Refs
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const chunksRef = useRef<Blob[]>([])
 
+  // Hooks - now passing tools
+  const {
+    currentVolume,
+    isSessionActive,
+    handleStartStopClick,
+    registerFunction,
+    status,
+    conversation,
+    sendTextMessage
+  } = useWebRTCAudioSession(voice, tools)
+
+  const toolsFunctions = useToolsFunctions()
+  // console.log(toolsFunctions)
+
+  // Screen Recording Functions
   const startRecording = async (): Promise<void> => {
     setError(null)
     try {
@@ -21,28 +76,24 @@ export default function OsMode(): JSX.Element {
         throw new Error('No screen sources found')
       }
 
-      const primaryScreen = sources[0]
-      const constraints = {
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: false,
         video: {
           mandatory: {
             chromeMediaSource: 'desktop',
-            chromeMediaSourceId: primaryScreen.id,
+            chromeMediaSourceId: sources[0].id,
             minWidth: 1280,
             maxWidth: 4000,
             minHeight: 720,
             maxHeight: 4000
           }
-        }
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia(
-        constraints as MediaStreamConstraints
-      )
+        } as MediaTrackConstraints
+      })
 
       const mediaRecorder = new MediaRecorder(stream, {
         mimeType: 'video/webm;codecs=vp9'
       })
+
       mediaRecorderRef.current = mediaRecorder
       chunksRef.current = []
 
@@ -73,29 +124,87 @@ export default function OsMode(): JSX.Element {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop()
       setIsRecording(false)
-
-      // Stop all tracks
       mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop())
     }
   }
 
+  // Effects
+  useEffect(() => {
+    Object.entries(toolsFunctions).forEach(([name, func]) => {
+      registerFunction(FUNCTION_NAME_MAP[name], func)
+    })
+  }, [registerFunction, toolsFunctions])
+
+  useEffect(() => {
+    if (!isSessionActive) {
+      setConfig(INITIAL_CONFIG)
+      return
+    }
+
+    setConfig({
+      ...INITIAL_CONFIG,
+      ...(isSessionActive && currentVolume > 0.01 ? { perlinTime: 20.0, perlinMorph: 25.0 } : {})
+    })
+  }, [isSessionActive, currentVolume])
+
+  const handleToggleOverlay = (): void => {
+    window.electron.ipcRenderer.invoke('toggle-grid-overlay')
+  }
+
   return (
-    <>
-      <img alt="logo" className="logo" src={electronLogo} />
-      <div className="creator">OS Mode</div>
-      <div className="text">
-        Build an Electron app with <span className="react">React</span>
-        &nbsp;and <span className="ts">TypeScript</span>
+    <motion.div
+      className="container flex flex-col items-center justify-center h-full"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
+      <div className="live-chat">
+        <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} transition={{ duration: 0.3 }}>
+          <AbstractBall {...config} />
+        </motion.div>
+
+        <motion.div
+          className="mt-4"
+          initial={{ y: 20, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
+          <button onClick={handleStartStopClick} className="toggle-button">
+            {isSessionActive ? <PhoneOff size={18} /> : <MicIcon size={18} />}
+          </button>
+        </motion.div>
+        {status && (
+          <motion.div
+            className="text"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+          >
+            <span className="ts">{status}</span>
+          </motion.div>
+        )}
       </div>
 
       {isRecording && (
-        <div className="recording-indicator">
+        <motion.div
+          className="recording-indicator"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
           <div className="recording-indicator-dot" />
           Recording in progress...
-        </div>
+        </motion.div>
       )}
 
-      <div className="recording-controls">
+      <motion.div
+        className="recording-controls"
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.4 }}
+      >
+        <button onClick={handleToggleOverlay} className="toggle-button">
+          Toggle overlay-grid
+        </button>
         {!isRecording ? (
           <button onClick={startRecording} className="toggle-button">
             <VideoIcon size={16} />
@@ -111,11 +220,13 @@ export default function OsMode(): JSX.Element {
             Stop Recording
           </button>
         )}
-      </div>
+      </motion.div>
 
-      {error && <div className="recording-error">{error}</div>}
-
-      <Versions />
-    </>
+      {error && (
+        <motion.div className="recording-error" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+          {error}
+        </motion.div>
+      )}
+    </motion.div>
   )
 }
